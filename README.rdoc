@@ -1,28 +1,142 @@
-== README
+## Decorator Trong Ruby on rails
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+### 1. Đặt vấn đề
+  Tưởng tượng, Bạn đang xây dựng một trang với màn hình quản lý Users gồm các trường: id, email, first_name, last_name ... trên View bạn muốn hiển thị ra tên người dùng với tên được ghép từ first_name + last_name. Ví dụ tương đối dễ và có rất nhiều cách xử lý đúng không (Nhưng để xử lý khoa học và phù hợp với các project lớn cho dễ review và maintain thì rất nhiều bạn vừa mới bước vào lập trình chưa biết đâu nhé).
 
-Things you may want to cover:
+Như các bạn đã biết ROR được xây dựng dựa trên mô hình `MVC`.
+Trong đó, `Controller` sẽ là cầu nối xử lý dữ liệu giữa `View` và `Model`. Model thì đóng vai trò xử lý dữ liệu, còn lại Views sẽ hiển thị dữ liệu cho người dùng. 
 
-* Ruby version
+Trong trường hợp ví dụ trên, việc ghép `first name` và `last name` nhiều bạn sẽ viết phương thức trong model để xử lý. Điều này vẫn ổn và hoàn toàn vẫn chạy được. Tuy nhiên với các `Project lớn` với khối lượng hàm xử lý dữ liệu nhiều thì rất khó để `maintain`. Điều này dẫn đến việc `Rails` có thêm `Helper` - Helper thường là nơi chứa các đoạn mã xử lý logic phức tạp thay cho view.
 
-* System dependencies
+Trong các dự án lớn, Helper sẽ được phân tán thành rất nhiều file và thư mục kiểu như `user_helper`, `shop_helper`, `shop/sidebar_helper`... code thường bị phân tán hoặc khác nhau rất ít. `Decorator` được sinh ra để giải quyết những vấn đề này.
 
-* Configuration
+`Decorator` (Nghĩa là trang trí) cũng là một `Patterns`. Nó là một lớp phụ trợ, là cầu nối giữa model và view. Decorator được xết vào dạng `"Presebter"`.
 
-* Database creation
+Có khá nhiều Gem giúp bạn ứng dụng Decorator vào project của mình: `ActiveDecorator` ,`Draper`. 
 
-* Database initialization
+### 2. Ứng dụng Decorator vào trong Project
 
-* How to run the test suite
+Trên thực tế `Decorator` chỉ là một lớp trung gian vì vậy để thực thi nó trong projetc cũng không quá phức tạp.
 
-* Services (job queues, cache servers, search engines, etc.)
+Như đã nói ở trên có khá nhiều cách để thêm lớp này vào trong project của mình. Bạn có thể thêm bằng `Gem` như `ActiveDecorator` , `Draper`. Và bạn cũng có thể thêm Lớp Decorator vào dự án của mình bằng cách thủ công. Cá nhân mình đã từng thực thi nó bằng cả 2 cách trên. Ở phần này mình sẽ thảo luận với các bạn các mà mình triển khai Decorator bằng "tay" và sẽ giới thiệu cơ bản về dùng Gem "ActiveDecorator" ở phần sau của bài viết.
 
-* Deployment instructions
+Mình sẽ tạo ra một trang quản lý thông tin users đơn giản với các thông tin như sau:
 
-* ...
+```
+ rails generate scaffold User first_name:string last_name:string active:boolean email:string uid:tring adress:string phone_number:string birthday:datetime
+```
+Thêm thư mục `decorators` vào dự án của mình:
+
+```
+mkdir app/decorators
+```
+Tạo decorator cho model User trong app/decorators/user_decorator.rb
+```ruby
+module UserDecorator
+  def full_name
+    return "#{first_name} #{last_name}"
+  end
+end
+
+```
+Bạn thấy đấy, Tôi tạo ra một lớp với và khai báo `UserDecorator` modul và giờ tôi định nghĩa các phương thức dùng để `"trang trí"` (mà trên view dùng) trong đó.
+
+Bây giờ làm sao để một `instance` của `Class User` có thể nhận `full_name` như một phương thức của Lớp này. Đơn giản hãy `include UserDecorator` vào trong `User class`
+
+```
+class User < ActiveRecord::Base                                                                                         
+   include UserDecorator                                                                                                                                                                                  
+end
+
+```
+
+Bây giờ trên View bạn có thể sử dụng phương thức full_name cho mọi instance của Class User
+
+```
+ User.first.full_name
+ => "quan hoang
+```
+
+```html
+<p id="notice"><%= notice %></p>
+<p>
+  <strong>Full name:</strong>
+  <%= @user.full_name %>
+</p>
+<p>
+  <strong>First name:</strong>
+  <%= @user.first_name %>
+</p>
+```
+### 3. Sử dụng gem active_decorator
+
+* Thêm `em 'active_decorator'` vào trong `Gemfile`
+
+Chạy:
+```
+bundle install
+```
+Tạo `decorator` cho `Post`
+
+```
+rails g decorator post
+```
+Sử dụng:
+
+Với việc sử dụng gem `active_decorator` bạn không cần làm gì với `model`
+
+```ruby
+class Post < ActiveRecord::Base
+  belongs_to :user
+end
+```
+Khi chạy lệnh `rails g decorator post` rails sẽ genarate cho chúng ta file `post_decorator.rb`
+Tôi sẽ viết function trong đó:
+
+```
+module PostDecorator
+  def link_to_user
+    link_to user.full_name, user
+  end
+end
+```
+Tôi viết function `link_to_user` để tạo ra link liên kết với user mà post đó thuộc về.
+
+Trên view tôi gọi như sau:
+
+```html
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>User:</strong>
+  <%= @post.link_to_user %>
+</p>
 
 
-Please feel free to use a different markup language if you do not plan to run
-<tt>rake doc:app</tt>.
+```
+Vậy là đẹp:
+
+![Screenshot from 2015-10-23 14:32:57.png](/uploads/images/f817bb52ebf40f927e39324c5ca708c0aafde390/444d15a1bdadcd3f32a340824895b3970df79a79.png) 
+
+`active_decorator` là một gem khá đơn giản và dễ sử dụng bạn có thể xem thêm chi tiết tại [Đây](https://github.com/amatsuda/active_decorator).
+
+Ngoài ra, Bạn cũng có thể ứng dụng `Decorator` vào rails với gem `Draper`, Gem này cung cấp cho chúng ta nhiều phương thức cũng như trợ giúp linh hoạt hơn.
+
+### 4 . Kết Luận
+
+
+`Decorator` là một `pattern` phụ trợ được thiết kế để giảm bớt số lượng dòng code cho Model đồng thời giao tiếp với View. Decorator không thật sự cần thiết trong mọi dự án nhưng đối với các dự án lớn có cấu trúc phức tạp Decorator trở thành một phần không thể thiếu.
+
+Nói tóm lại, Với `MVC pattern` các bạn có thể xử lý được tất cả các vấn đề mà một `website` cần để thực hiện và đưa ra kết quả trên giao diện người dùng. Nhưng hãy chú ý sử dụng các lớp phụ trợ thật tốt và uyển chuyển để có được một project thật "đẹp" và săn sàng cho việc bảo trì, mở rộng về sau nhé.
+
+Chúc các bạn thành công.
+
+Cảm ơn.
+
+Đọc thêm tại:
+
+https://en.wikipedia.org/wiki/Decorator_pattern 
+
+http://johnotander.com/rails/2014/03/07/decorators-on-rails/
+
+http://nithinbekal.com/posts/ruby-decorators/
